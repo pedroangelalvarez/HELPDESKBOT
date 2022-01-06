@@ -80,7 +80,6 @@ func login(wac *whatsapp.Conn) error {
 			return fmt.Errorf("error during login: %v", err)
 		}
 	}
-
 	if err = writeSession(session); err != nil {
 		return fmt.Errorf("error saving session: %v", err)
 	}
