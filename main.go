@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 	"time"
-
+  "database/sql"
 	_ "github.com/mattn/go-sqlite3"
 
 	qrcodeTerminal "github.com/Baozisoftware/qrcode-terminal-go"
@@ -16,7 +16,8 @@ import (
 
 type person struct {
 	id          string
-	lastMessage time.Time
+	fecha time.Time
+  activo int
 }
 
 type waHandler struct {
@@ -41,11 +42,13 @@ func (wh *waHandler) HandleTextMessage(message whatsapp.TextMessage) {
 	if message.Info.FromMe || message.Info.Timestamp < wh.startTime {
 		return
 	}
-	//db, err := sql.Open("sqlite3", "./sesiones.db")
-	//checkErr(err)
+	db, err := sql.Open("sqlite3", "./sesiones.db")
+	checkErr(err)
 
 	if strings.Contains(strings.ToLower(message.Text), "hola") || strings.Contains(strings.ToLower(message.Text), "buenos dias") || strings.Contains(strings.ToLower(message.Text), "buenas tardes") || strings.Contains(strings.ToLower(message.Text), "buenas noches") {
-		msg := whatsapp.TextMessage{
+		
+    
+    msg := whatsapp.TextMessage{
 			Info: whatsapp.MessageInfo{
 				RemoteJid: message.Info.RemoteJid,
 			},
@@ -53,6 +56,17 @@ func (wh *waHandler) HandleTextMessage(message whatsapp.TextMessage) {
 		}
 
 		if _, err := wh.wac.Send(msg); err != nil {
+			fmt.Fprintf(os.Stderr, "error sending message: %v\n", err)
+		}
+
+    msg = whatsapp.TextMessage{
+			Info: whatsapp.MessageInfo{
+				RemoteJid: message.Info.RemoteJid,
+			},
+			Text: "Para comenzar indicame qué tipo de problema tienes?",
+		}
+
+		if _, err = wh.wac.Send(msg); err != nil {
 			fmt.Fprintf(os.Stderr, "error sending message: %v\n", err)
 		}
 
