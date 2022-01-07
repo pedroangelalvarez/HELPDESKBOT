@@ -2,13 +2,13 @@ package main
 
 import (
 	"encoding/gob"
-	"fmt"
+	"database/sql"
+  "fmt"
+	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os"
 	"strings"
 	"time"
-  "database/sql"
-	_ "github.com/mattn/go-sqlite3"
 
 	qrcodeTerminal "github.com/Baozisoftware/qrcode-terminal-go"
 	"github.com/Rhymen/go-whatsapp"
@@ -31,6 +31,40 @@ func checkErr(err error) {
 	}
 }
 
+
+func AsignandoSesion(id string) {
+  currentTime := time.Now()
+  var existe bool
+  db, err := sql.Open("sqlite3", "./sesiones.db")
+	checkErr(err)
+  rows, errROW := db.Query("SELECT * FROM sessions WHERE ID ="+id)
+	checkErr(errROW)
+	for rows.Next() {
+		var ID string
+		var FECHA string
+		var ACTIVO int
+		rows.Scan(&ID, &FECHA, &ACTIVO)
+		fmt.Println(ID, FECHA, ACTIVO)
+    existe = true
+	}
+  rows.Close()
+
+  if existe{
+    _, err = db.Exec("UPDATE `sessions` SET FECHA='"+currentTime.Format("2006-01-02 15:04:05")+"' WHERE ID="+id)
+    if err != nil {
+      fmt.Println(err)
+      os.Exit(1)
+    }
+  } else{
+    _, err = db.Exec("INSERT INTO `sessions` values('" + "51966614614s.whatsapp.net" + "','" + currentTime.Format("2006-01-02 15:04:05") + "'," + "1" + ")")
+    if err != nil {
+      fmt.Println(err)
+      os.Exit(1)
+    }
+  }
+	db.Close()
+}
+
 func (wh *waHandler) HandleError(err error) {
 	fmt.Fprintf(os.Stderr, "error caught in handler: %v\n", err)
 }
@@ -42,12 +76,10 @@ func (wh *waHandler) HandleTextMessage(message whatsapp.TextMessage) {
 	if message.Info.FromMe || message.Info.Timestamp < wh.startTime {
 		return
 	}
-	db, err := sql.Open("sqlite3", "./sesiones.db")
-	checkErr(err)
 
 	if strings.Contains(strings.ToLower(message.Text), "hola") || strings.Contains(strings.ToLower(message.Text), "buenos dias") || strings.Contains(strings.ToLower(message.Text), "buenas tardes") || strings.Contains(strings.ToLower(message.Text), "buenas noches") {
 		
-    
+    AsignandoSesion(message.Info.RemoteJid)
     msg := whatsapp.TextMessage{
 			Info: whatsapp.MessageInfo{
 				RemoteJid: message.Info.RemoteJid,
@@ -66,7 +98,7 @@ func (wh *waHandler) HandleTextMessage(message whatsapp.TextMessage) {
 			Text: "Para comenzar indicame qué tipo de problema tienes?",
 		}
 
-		if _, err = wh.wac.Send(msg); err != nil {
+		if _, err := wh.wac.Send(msg); err != nil {
 			fmt.Fprintf(os.Stderr, "error sending message: %v\n", err)
 		}
 
@@ -76,6 +108,7 @@ func (wh *waHandler) HandleTextMessage(message whatsapp.TextMessage) {
 
 func login(wac *whatsapp.Conn) error {
 	session, err := readSession()
+  
 	if err == nil {
 		session, err = wac.RestoreWithSession(session)
 		if err != nil {

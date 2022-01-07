@@ -8,6 +8,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 )
+import "Conexion"
 
 func main() {
 	os.MkdirAll("./data/reg", 0755)
